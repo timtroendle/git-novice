@@ -5,31 +5,48 @@ subtitle: A Better Kind of Backup
 minutes: 60
 ---
 > ## Learning Objectives {.objectives}
-> 
-> *   Explain which initialization and configuration steps are required once per machine,
->     and which are required once per repository.
+>
+> *   Discuss what version control is and how it works.
+> *   Explain how Git and distributed version control works.
 > *   Go through the modify-add-commit cycle for single and multiple files
 >     and explain where information is stored at each stage.
-> *   Identify and use Git revision numbers.
 > *   Compare files with old versions of themselves.
 > *   Restore old versions of files.
+> *   Identify and use Git revision numbers.
 > *   Configure Git to ignore specific files,
 >     and explain why it is sometimes useful to do so.
 
-We'll start by exploring how version control can be used
-to keep track of what one person did and when.
-Even if you aren't collaborating with other people,
-version control is much better for this than this:
+## What is version control and how does it work?
 
 [![Piled Higher and Deeper by Jorge Cham, http://www.phdcomics.com](fig/phd101212s.gif)](http://www.phdcomics.com)
 
 "Piled Higher and Deeper" by Jorge Cham, http://www.phdcomics.com
 
+We've all been in this situation before: it seems ridiculous to have multiple nearly-identical versions of the same document. Some word processors let us deal with this a little better, like Microsoft Word ("Track Changes") or Google Docs version history.
+
+Version control systems start with a base version of the document and then save just the changes you made at each step on the way. You can think of it as a tape: if you rewind the tape and start at the base document, then you can play back each change and end up with your latest version.
+
+![Changes are saved sequentially](fig/play-changes.svg)
+
+Once you think of changes as separate from the document itself, you can then think about "playing back" different sets of changes onto the base document and getting different versions of the document. For example, two users can make independent sets of changes based on the same document.
+
+![Different versions can be saved](fig/versions.svg)
+
+If there aren't conflicts, you can even try to play two sets of changes onto the same base document.
+
+![Multiple versions can be merged](fig/merge.svg)
+
+## How Git works
+
+A version control system is a tool that keeps track of these changes for us and helps us version and merge our files. A system like Git is designed to keep multiple sets of versions and changes in sync across different computers or servers. This is called a _distributed_ system.
+
+A [repository](reference.html#repository) is the set of files that we want to keep under version control.
+
+With Git, every user who wants to make changes to a repository has their own copy of the files in the repository, along with their own copy of the changes (the _commits_) that have been made to those files. Git keeps the commits in a secret directory along with the copies of the files.
+
 ## Setting Up
 
-The first time we use Git on a new machine,
-we need to configure a few things.
-Here's how Dracula sets up his new laptop:
+The first time we use Git on a new machine, we need to make sure Git knows a few things. We can configure some basic settings with `git config`:
 
 ~~~ {.bash}
 $ git config --global user.name "Vlad Dracula"
@@ -64,56 +81,22 @@ we're telling Git:
 The four commands above only need to be run once:
 the flag `--global` tells Git to use the settings for every project on this machine.
 
-You can check your settings at any time:
+
+## Start Version Control
+
+Let's create a directory for our work. Create a new folder in your home directory and call it `planets`, open a terminal window and navigate into that directory.
 
 ~~~ {.bash}
-$ git config --list
-~~~
-
-> ## Proxy {.callout}
->
-> In some networks you need to use a proxy. If this is the case you may also
-> need to tell Git about the proxy:
->
-> ~~~ {.bash}
-> $ git config --global http.proxy proxy-url
-> $ git config --global https.proxy proxy-url
-> ~~~
->
-> To disable the proxy, use
->
-> ~~~ {.bash}
-> $ git config --global --unset http.proxy
-> $ git config --global --unset https.proxy
-> ~~~
-
-## Creating a Repository
-
-Once Git is configured,
-we can start using it.
-Let's create a directory for our work:
-
-~~~ {.bash}
-$ mkdir planets
 $ cd planets
 ~~~
 
-and tell Git to make it a [repository](reference.html#repository)&mdash;a place where
-Git can store old versions of our files:
+and tell Git to make this directory into a repository.
 
 ~~~ {.bash}
 $ git init
 ~~~
 
-If we use `ls` to show the directory's contents,
-it appears that nothing has changed:
-
-~~~ {.bash}
-$ ls
-~~~
-
-But if we add the `-a` flag to show everything,
-we can see that Git has created a hidden directory called `.git`:
+Git creates a hidden directory called `.git` in this directory:
 
 ~~~ {.bash}
 $ ls -a
@@ -122,59 +105,26 @@ $ ls -a
 .	..	.git
 ~~~
 
-Git stores information about the project in this special sub-directory.
-If we ever delete it,
-we will lose the project's history.
-
-We can check that everything is set up correctly
-by asking Git to tell us the status of our project:
-
-~~~ {.bash}
-$ git status
-~~~
-~~~ {.output}
-# On branch master
-#
-# Initial commit
-#
-nothing to commit (create/copy files and use "git add" to track)
-~~~
+This hidden directory contains Git's history of all the changes and commits we're going to make. If we ever delete it, we will lose the project's history.
 
 ## Tracking Changes to Files
 
+### Create a file:
+
 Let's create a file called `mars.txt` that contains some notes
 about the Red Planet's suitability as a base.
-(We'll use `nano` to edit the file;
-you can use whatever editor you like.
-In particular, this does not have to be the core.editor you set globally earlier.)
 
-~~~ {.bash}
-$ nano mars.txt
-~~~
-
-Type the text below into the `mars.txt` file:
+Open your favorite text editor, maybe TextWrangler on the Mac or Notepad on Windows, and start a new file. Type some text into the new file:
 
 ~~~ {.output}
 Cold and dry, but everything is my favorite color
 ~~~
 
-`mars.txt` now contains a single line:
+Save this file in your `planets` directory as `mars.txt`.
 
-~~~ {.bash}
-$ ls
-~~~
-~~~ {.output}
-mars.txt
-~~~
-~~~ {.bash}
-$ cat mars.txt
-~~~
-~~~ {.output}
-Cold and dry, but everything is my favorite color
-~~~
+### Tracking our file:
 
-If we check the status of our project again,
-Git tells us that it's noticed the new file:
+Let's ask Git about the status of this repo:
 
 ~~~ {.bash}
 $ git status
@@ -191,116 +141,56 @@ $ git status
 nothing added to commit but untracked files present (use "git add" to track)
 ~~~
 
-The "untracked files" message means that there's a file in the directory
-that Git isn't keeping track of.
-We can tell Git that it should do so using `git add`:
+We can see that our `mars.txt` file is listed as an "untracked file." We can tell Git that it should track this file using `git add`:
 
 ~~~ {.bash}
 $ git add mars.txt
 ~~~
 
-and then check that the right thing happened:
+### Committing for the first time:
 
-~~~ {.bash}
-$ git status
-~~~
-~~~ {.output}
-# On branch master
-#
-# Initial commit
-#
-# Changes to be committed:
-#   (use "git rm --cached <file>..." to unstage)
-#
-#	new file:   mars.txt
-#
-~~~
-
-Git now knows that it's supposed to keep track of `mars.txt`,
-but it hasn't yet recorded any changes for posterity as a commit.
-To get it to do that,
-we need to run one more command:
+Now let's commit this file into our repo for the first time.
 
 ~~~ {.bash}
 $ git commit -m "Starting to think about Mars"
 ~~~
 ~~~ {.output}
-[master (root-commit) f22b25e] Starting to think about Mars
+[master (root-commit) 189f6e7] Starting to think about Mars
  1 file changed, 1 insertion(+)
  create mode 100644 mars.txt
 ~~~
 
-When we run `git commit`,
-Git takes everything we have told it to save by using `git add`
-and stores a copy permanently inside the special `.git` directory.
-This permanent copy is called a [revision](reference.html#revision)
-and its short identifier is `f22b25e`.
-(Your revision may have another identifier.)
+Git takes all the changes we made this time and stores a record of those changes permanently inside the special `.git` directory. This set of changes is called a [revision](reference.html#revision). It assigns a unique identifier (`189f6e7`) to the commit.
 
-We use the `-m` flag (for "message")
-to record a comment that will help us remember later on what we did and why.
-If we just run `git commit` without the `-m` option,
-Git will launch `nano` (or whatever other editor we configured at the start)
-so that we can write a longer message.
+### Looking at past changes:
 
-If we run `git status` now:
+We can look at the repo's history to see what we've done in the past.
 
-~~~ {.bash}
-$ git status
-~~~
-~~~ {.output}
-# On branch master
-nothing to commit, working directory clean
-~~~
-
-it tells us everything is up to date.
-If we want to know what we've done recently,
-we can ask Git to show us the project's history using `git log`:
+From the command line, type `git log`:
 
 ~~~ {.bash}
 $ git log
 ~~~
 ~~~ {.output}
-commit f22b25e3233b4645dabd0d81e651fe074bd8e73b
-Author: Vlad Dracula <vlad@tran.sylvan.ia>
-Date:   Thu Aug 22 09:51:46 2013 -0400
+commit 189f6e70156057a0da216b18a1bd592fd89daabf
+Author: daisieh_local <daisieh@gmail.com>
+Date:   Sat Feb 28 02:00:20 2015 -0800
 
     Starting to think about Mars
 ~~~
 
-`git log` lists all revisions  made to a repository in reverse chronological order.
-The listing for each revision includes
-the revision's full identifier
-(which starts with the same characters as
-the short identifier printed by the `git commit` command earlier),
-the revision's author,
-when it was created,
-and the log message Git was given when the revision was created.
-
-> ## Where Are My Changes? {.callout}
->
-> If we run `ls` at this point, we will still see just one file called `mars.txt`.
-> That's because Git saves information about files' history
-> in the special `.git` directory mentioned earlier
-> so that our filesystem doesn't become cluttered
-> (and so that we can't accidentally edit or delete an old version).
+You'll see all the revisions that were made in reverse chronological order. You can see the unique identifiers for each of the commits too: notice that the short identifier that we got from the commit message is just the first seven letters of this longer identifier. Git accepts either version of the identifier.
 
 ## Changing a File
 
-Now suppose Dracula adds more information to the file.
-(Again, we'll edit with `nano` and then `cat` the file to show its contents;
-you may use a different editor, and don't need to `cat`.)
+Now suppose Dracula adds more information to the file. Go to the text editor where you have `mars.txt` open, and make some changes to the file:
 
-~~~ {.bash}
-$ nano mars.txt
-$ cat mars.txt
-~~~
 ~~~ {.output}
 Cold and dry, but everything is my favorite color
 The two moons may be a problem for Wolfman
 ~~~
 
-When we run `git status` now,
+Now go back to your terminal window. When we run `git status` now,
 it tells us that a file it already knows about has been modified:
 
 ~~~ {.bash}
@@ -320,13 +210,13 @@ no changes added to commit (use "git add" and/or "git commit -a")
 The last line is the key phrase:
 "no changes added to commit".
 We have changed this file,
-but we haven't told Git we will want to save those changes
+but we haven't told Git we will want it to record these changes
 (which we do with `git add`)
-much less actually saved them (which we do with `git commit`).
+much less actually committed them.
 So let's do that now. It is good practice to always review
 our changes before saving them. We do this using `git diff`.
 This shows us the differences between the current state
-of the file and the most recently saved version:
+of the file and the most recently committed version:
 
 ~~~ {.bash}
 $ git diff
@@ -387,19 +277,9 @@ $ git commit -m "Concerns about Mars's moons on my furry friend"
 ~~~
 
 Git insists that we add files to the set we want to commit
-before actually committing anything
-because we may not want to commit everything at once.
-For example,
-suppose we're adding a few citations to our supervisor's work
-to our thesis.
-We might want to commit those additions,
-and the corresponding addition to the bibliography,
-but *not* commit the work we're doing on the conclusion
-(which we haven't finished yet).
+before actually committing anything. It's sort of a double-check to make sure that you know what you're committing before you do it. For example, if you accidentally put some other file into this git-tracked directory, you probably don't want to introduce it into your git history. By explicitly adding the file first, you're saying that these are exactly the changes I want to commit.
 
-To allow for this,
-Git has a special staging area
-where it keeps track of things that have been added to
+Git has a special staging area where it keeps track of things that have been added to
 the current [change set](reference.html#change-set)
 but not yet committed.
 `git add` puts things in this area,
@@ -408,20 +288,15 @@ and `git commit` then copies them to long-term storage (as a commit):
 ![The Git Staging Area](fig/git-staging-area.svg)
 
 Let's watch as our changes to a file move from our editor
-to the staging area
-and into long-term storage.
-First,
-we'll add another line to the file:
+to the staging area and into the repository.
+First, add another line to the file:
 
-~~~ {.bash}
-$ nano mars.txt
-$ cat mars.txt
-~~~
 ~~~ {.output}
 Cold and dry, but everything is my favorite color
 The two moons may be a problem for Wolfman
 But the Mummy will appreciate the lack of humidity
 ~~~
+
 ~~~ {.bash}
 $ git diff
 ~~~
@@ -447,12 +322,10 @@ $ git add mars.txt
 $ git diff
 ~~~
 
-There is no output:
-as far as Git can tell,
+There is no output: as far as Git can tell,
 there's no difference between what it's been asked to save permanently
 and what's currently in the directory.
-However,
-if we do this:
+However, if we do this:
 
 ~~~ {.bash}
 $ git diff --staged
@@ -471,7 +344,7 @@ index 315bf3a..b36abfd 100644
 it shows us the difference between
 the last committed change
 and what's in the staging area.
-Let's save our changes:
+Let's commit our changes to the repo:
 
 ~~~ {.bash}
 $ git commit -m "Thoughts about the climate"
@@ -565,49 +438,6 @@ so `HEAD~1` (pronounced "head minus one")
 means "the previous revision",
 while `HEAD~123` goes back 123 revisions from where we are now.
 
-We can also refer to revisions using
-those long strings of digits and letters
-that `git log` displays.
-These are unique IDs for the changes,
-and "unique" really does mean unique:
-every change to any set of files on any machine
-has a unique 40-character identifier.
-Our first commit was given the ID
-f22b25e3233b4645dabd0d81e651fe074bd8e73b,
-so let's try this:
-
-~~~ {.bash}
-$ git diff f22b25e3233b4645dabd0d81e651fe074bd8e73b mars.txt
-~~~
-~~~ {.output}
-diff --git a/mars.txt b/mars.txt
-index df0654a..b36abfd 100644
---- a/mars.txt
-+++ b/mars.txt
-@@ -1 +1,3 @@
- Cold and dry, but everything is my favorite color
-+The two moons may be a problem for Wolfman
-+But the Mummy will appreciate the lack of humidity
-~~~
-
-That's the right answer,
-but typing random 40-character strings is annoying,
-so Git lets us use just the first few:
-
-~~~ {.bash}
-$ git diff f22b25e mars.txt
-~~~
-~~~ {.output}
-diff --git a/mars.txt b/mars.txt
-index df0654a..b36abfd 100644
---- a/mars.txt
-+++ b/mars.txt
-@@ -1 +1,3 @@
- Cold and dry, but everything is my favorite color
-+The two moons may be a problem for Wolfman
-+But the Mummy will appreciate the lack of humidity
-~~~
-
 ## Recovering Old Versions
 
 All right:
@@ -654,16 +484,10 @@ But the Mummy will appreciate the lack of humidity
 ~~~
 
 As you might guess from its name,
-`git checkout` checks out (i.e., restores) an old version of a file.
+`git checkout` checks out (i.e., restores) a different version of a file.
 In this case,
 we're telling Git that we want to recover the version of the file recorded in `HEAD`,
 which is the last saved revision.
-If we want to go back even further,
-we can use a revision identifier instead:
-
-~~~ {.bash}
-$ git checkout f22b25e mars.txt
-~~~
 
 It's important to remember that
 we must use the revision number that identifies the state of the repository
@@ -680,192 +504,3 @@ like (moving back from `HEAD`, the most recently committed version):
 
 ![When Git Updates Revision Numbers](fig/git-when-revisions-updated.svg)
 
-> ## Simplifying the Common Case {.callout}
->
-> If you read the output of `git status` carefully,
-> you'll see that it includes this hint:
->
-> ~~~ {.bash}
-> (use "git checkout -- <file>..." to discard changes in working directory)
-> ~~~
->
-> As it says,
-> `git checkout` without a version identifier restores files to the state saved in `HEAD`.
-> The double dash `--` is needed to separate the names of the files being recovered
-> from the command itself:
-> without it,
-> Git would try to use the name of the file as the revision identifier.
-
-The fact that files can be reverted one by one
-tends to change the way people organize their work.
-If everything is in one large document,
-it's hard (but not impossible) to undo changes to the introduction
-without also undoing changes made later to the conclusion.
-If the introduction and conclusion are stored in separate files,
-on the other hand,
-moving backward and forward in time becomes much easier.
-
-## Ignoring Things
-
-What if we have files that we do not want Git to track for us,
-like backup files created by our editor
-or intermediate files created during data analysis.
-Let's create a few dummy files:
-
-~~~ {.bash}
-$ mkdir results
-$ touch a.dat b.dat c.dat results/a.out results/b.out
-~~~
-
-and see what Git says:
-
-~~~ {.bash}
-$ git status
-~~~
-~~~ {.output}
-# On branch master
-# Untracked files:
-#   (use "git add <file>..." to include in what will be committed)
-#
-#	a.dat
-#	b.dat
-#	c.dat
-#	results/
-nothing added to commit but untracked files present (use "git add" to track)
-~~~
-
-Putting these files under version control would be a waste of disk space.
-What's worse,
-having them all listed could distract us from changes that actually matter,
-so let's tell Git to ignore them.
-
-We do this by creating a file in the root directory of our project called `.gitignore`.
-
-~~~ {.bash}
-$ nano .gitignore
-$ cat .gitignore
-~~~
-~~~ {.output}
-*.dat
-results/
-~~~
-
-These patterns tell Git to ignore any file whose name ends in `.dat`
-and everything in the `results` directory.
-(If any of these files were already being tracked,
-Git would continue to track them.)
-
-Once we have created this file,
-the output of `git status` is much cleaner:
-
-~~~ {.bash}
-$ git status
-~~~
-~~~ {.output}
-# On branch master
-# Untracked files:
-#   (use "git add <file>..." to include in what will be committed)
-#
-#	.gitignore
-nothing added to commit but untracked files present (use "git add" to track)
-~~~
-
-The only thing Git notices now is the newly-created `.gitignore` file.
-You might think we wouldn't want to track it,
-but everyone we're sharing our repository with will probably want to ignore
-the same things that we're ignoring.
-Let's add and commit `.gitignore`:
-
-~~~ {.bash}
-$ git add .gitignore
-$ git commit -m "Add the ignore file"
-$ git status
-~~~
-~~~ {.output}
-# On branch master
-nothing to commit, working directory clean
-~~~
-
-As a bonus,
-using `.gitignore` helps us avoid accidentally adding files to the repository that we don't want.
-
-~~~ {.bash}
-$ git add a.dat
-~~~
-~~~ {.output}
-The following paths are ignored by one of your .gitignore files:
-a.dat
-Use -f if you really want to add them.
-fatal: no files added
-~~~
-
-If we really want to override our ignore settings,
-we can use `git add -f` to force Git to add something.
-We can also always see the status of ignored files if we want:
-
-~~~ {.bash}
-$ git status --ignored
-~~~
-~~~ {.output}
-# On branch master
-# Ignored files:
-#  (use "git add -f <file>..." to include in what will be committed)
-#
-#        a.dat
-#        b.dat
-#        c.dat
-#        results/
-
-nothing to commit, working directory clean
-~~~
-
-> ## Committing Changes to Git {.challenge}
->
-> Which command(s) below would save changes of `myfile.txt` to my local Git repository?
->
-> 1. `git commit -m "my recent changes"`
-> 2. `git init myfile.txt`
->    `git commit -m "my recent changes"`
-> 3. `git add myfile.txt`
->    `git commit -m "my recent changes"`
-> 4. `git commit -m myfile.txt "my recent changes"`
-
-> ## Recovering Older Versions of a File {.challenge}
->
-> Jennifer has made changes to the Python script that she has been working on for weeks, and the 
-> modifications she made this morning "broke" the script and it no longer runs. She has spent
-> ~ 1hr trying to fix it, with no luck...
->
-> Luckily, she has been keeping track of her revisions using Git! Which commands below will 
-> let her recover the last committed version of her Python script called
-> `data_cruncher.py`?
->
-> 1. `git checkout HEAD`
-> 2. `git checkout HEAD data_cruncher.py`
-> 3. `git checkout HEAD~1 data_cruncher.py`
-> 4. `git checkout <unique ID of last revision> data_cruncher.py`
-> 5. Both 2 & 4
-
-> ## `bio` Repository {.challenge}
->
-> Create a new Git repository on your computer called `bio`.
-> Write a three-line biography for yourself in a file called `me.txt`,
-> commit your changes,
-> then modify one line and add a fourth and display the differences
-> between its updated state and its original state.
-
-> ## Places to Create Git Repositories {.challenge}
->
-> The following sequence of commands creates one Git repository inside another:
-> 
-> ~~~ {.bash}
-> cd           # return to home directory
-> mkdir alpha  # make a new directory alpha
-> cd alpha     # go into alpha
-> git init     # make the alpha directory a Git repository
-> mkdir beta   # make a sub-directory alpha/beta
-> cd beta      # go into alpha/beta
-> git init     # make the beta sub-directory a Git repository
-> ~~~
-> 
-> Why is it a bad idea to do this?
